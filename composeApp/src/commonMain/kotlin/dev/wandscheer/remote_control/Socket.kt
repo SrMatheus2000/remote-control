@@ -2,10 +2,8 @@ package dev.wandscheer.remote_control
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.net.NetworkInterface
 import java.net.StandardSocketOptions.SO_BROADCAST
 import java.net.StandardSocketOptions.SO_REUSEADDR
 import java.nio.ByteBuffer

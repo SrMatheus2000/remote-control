@@ -5,6 +5,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.application
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -51,7 +52,7 @@ fun main() = application {
                     if (remote != null) udp.send(BROADCAST_IDENTIFIER, remote.address.hostAddress, remote.port)
                     continue
                 }
-                println("${remote?.address}:${remote?.port} → ${data.decodeToString()}")
+                println("${remote?.address}:${remote?.port} → ${RemoteEvent.decode(data)}")
             }
         }
         onDispose { udp.close() }

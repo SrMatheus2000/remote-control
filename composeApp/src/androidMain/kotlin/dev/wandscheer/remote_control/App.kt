@@ -7,8 +7,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import java.net.InetSocketAddress
 
@@ -16,33 +19,48 @@ import java.net.InetSocketAddress
 @Preview
 fun App() {
     val scope = rememberCoroutineScope()
+    val lifeCycleOwner = LocalLifecycleOwner.current
 
     val udp = remember { UdpChannel.open() }
 
     val (address, setAddress) = remember { mutableStateOf<InetSocketAddress?>(null) }
 
-    DisposableEffect(Unit) {
-        scope.launch {
-            udp.sendBroadcast(BROADCAST_IDENTIFIER, SERVER_UDP_PORT)
-            println("Sent broadcast")
+    DisposableEffect(lifeCycleOwner) {
+        val job = scope.launch(Dispatchers.IO) {
+
             while (isActive) {
-                val (data, remote) = udp.receive()
-                if (data.contentEquals(BROADCAST_IDENTIFIER)) {
-                    println("Received broadcast response from ${remote?.address}:${remote?.port}")
-                    setAddress(remote)
+                udp.sendBroadcast(BROADCAST_IDENTIFIER, SERVER_UDP_PORT)
+                println("➡️  broadcast sent, waiting…")
+
+                val found = withTimeoutOrNull(5_000) {
+                    val (data, remote) = udp.receive()
+                    if (data.contentEquals(BROADCAST_IDENTIFIER)) {
+                        println("✅  reply from ${remote?.address}:${remote?.port}")
+                        remote
+                    } else null
+                }
+
+                if (found != null) {
+                    setAddress(found)
                     break
+                } else {
+                    println("⏱️  timeout, retrying…")
                 }
             }
         }
-        onDispose { udp.close() }
+
+        onDispose {
+            job.cancel()
+            udp.close()
+        }
     }
 
     val sendData = remember(address) {
-        { data: String ->
+        { data: RemoteEvent ->
             if (address == null) return@remember
             scope.launch {
                 println("Sending data: $data")
-                udp.send(data.encodeToByteArray(), address)
+                udp.send(data.encode(), address)
             }
         }
     }
