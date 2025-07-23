@@ -6,6 +6,8 @@ import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.NetworkInterface
+import java.net.StandardSocketOptions.SO_BROADCAST
+import java.net.StandardSocketOptions.SO_REUSEADDR
 import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
 
@@ -17,6 +19,8 @@ class UdpChannel private constructor(
     companion object {
         fun open(bindAddress: InetAddress? = null, bindPort: Int? = 0): UdpChannel {
             val ch = DatagramChannel.open().apply {
+                setOption(SO_BROADCAST, true)
+                setOption(SO_REUSEADDR, true)
                 bind(bindPort?.let { InetSocketAddress(bindAddress, it) })
             }
             val addr = ch.localAddress as? InetSocketAddress
@@ -25,8 +29,19 @@ class UdpChannel private constructor(
         }
     }
 
-    suspend fun send(data: ByteArray, host: String, port: Int) = withContext(Dispatchers.IO) {
-        channel.send(ByteBuffer.wrap(data), InetSocketAddress(host, port))
+    suspend fun send(data: ByteArray, host: String, port: Int) =
+        send(data, InetSocketAddress(host, port))
+
+    suspend fun send(data: ByteArray, address: InetSocketAddress) = withContext(Dispatchers.IO) {
+        channel.send(ByteBuffer.wrap(data), address)
+    }
+
+    suspend fun sendBroadcast(
+        data: ByteArray,
+        port: Int = SERVER_UDP_PORT,
+        address: InetAddress = InetAddress.getByName("255.255.255.255")
+    ) = withContext(Dispatchers.IO) {
+        channel.send(ByteBuffer.wrap(data), InetSocketAddress(address, port))
     }
 
     suspend fun receive(maxSize: Int = 1500): Pair<ByteArray, InetSocketAddress?> =

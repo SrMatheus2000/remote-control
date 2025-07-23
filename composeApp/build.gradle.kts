@@ -10,12 +10,6 @@ plugins {
     alias(libs.plugins.composeHotReload)
 }
 
-//java {
-//    toolchain {
-//        languageVersion = JavaLanguageVersion.of(17)
-//        vendor = JvmVendorSpec.AMAZON
-//    }
-//}
 
 kotlin {
     androidTarget {
