@@ -5,7 +5,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.application
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -25,7 +24,10 @@ fun firstLocalIPv4(): Inet4Address = NetworkInterface.getNetworkInterfaces().asS
 
 fun ipv4WithDefaultGateway(): Inet4Address {
     // ── run “route print -4” and collect its text ───────────────────────────────
-    val text = ProcessBuilder("cmd", "/c", "route PRINT -4").redirectErrorStream(true).start().inputStream.reader()
+    val text = ProcessBuilder("cmd", "/c", "route PRINT -4")
+        .redirectErrorStream(true)
+        .start()
+        .inputStream.reader()
         .use { it.readText() }
 
     // ── find the first “0.0.0.0  0.0.0.0  <gateway>  <interface> …” line ────────
@@ -41,6 +43,8 @@ fun ipv4WithDefaultGateway(): Inet4Address {
 fun main() = application {
     val scope = rememberCoroutineScope()
 
+    val mouseController = remember { RemoteMouseController() }
+
     val udp = remember { UdpChannel.open(bindAddress = ipv4WithDefaultGateway(), bindPort = SERVER_UDP_PORT) }
 
     DisposableEffect(Unit) {
@@ -53,9 +57,12 @@ fun main() = application {
                     continue
                 }
                 println("${remote?.address}:${remote?.port} → ${RemoteEvent.decode(data)}")
+                RemoteEvent.decode(data)?.let { mouseController.processEvent(it) }
             }
         }
-        onDispose { udp.close() }
+        onDispose {
+            udp.close()
+        }
     }
 
     val icon = painterResource(Res.drawable.remote_control_icon)
