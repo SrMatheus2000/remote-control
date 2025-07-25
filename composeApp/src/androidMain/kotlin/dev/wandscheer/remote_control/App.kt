@@ -73,6 +73,9 @@ fun App() {
             RemoteControlPad {
                 sendData(it)
             }
+            KeyboardCapture {
+                sendData(it)
+            }
         }
     }
 }

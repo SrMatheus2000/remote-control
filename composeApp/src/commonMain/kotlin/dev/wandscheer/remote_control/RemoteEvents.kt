@@ -10,9 +10,14 @@ sealed interface RemoteEvent {
         protected const val OP_TOUCH_DOWN: Byte = 0x02
         protected const val OP_TOUCH_UP: Byte = 0x03
         protected const val OP_SCROLL: Byte = 0x04
+
         protected const val OP_LEFT_CLICK: Byte = 0x11
         protected const val OP_MIDDLE_CLICK: Byte = 0x12
         protected const val OP_RIGHT_CLICK: Byte = 0x13
+
+        protected const val OP_KEY_DOWN  : Byte = 0x20
+        protected const val OP_KEY_UP    : Byte = 0x21
+        protected const val OP_TEXT_IN   : Byte = 0x22
 
         /** Parse raw bytes back into a [RemoteEvent] (null if malformed) */
         fun decode(raw: ByteArray): RemoteEvent? {
@@ -35,6 +40,14 @@ sealed interface RemoteEvent {
                 OP_LEFT_CLICK -> LeftClick
                 OP_MIDDLE_CLICK -> MiddleClick
                 OP_RIGHT_CLICK -> RightClick
+                OP_KEY_DOWN -> KeyDown(beShort(raw, 1))
+                OP_KEY_UP   -> KeyUp(beShort(raw, 1))
+                OP_TEXT_IN  -> {
+                    if (raw.size < 2) return null
+                    val n = raw[1].toInt() and 0xFF
+                    if (raw.size < 2 + n) return null
+                    TextInput(String(raw, 2, n, Charsets.UTF_8))
+                }
                 else -> null
             }
         }
@@ -69,6 +82,20 @@ data object MiddleClick : RemoteEvent {
 
 data object RightClick : RemoteEvent {
     override fun encode() = byteArrayOf(RemoteEvent.OP_RIGHT_CLICK, 0)
+}
+
+data class KeyDown(val vk: Short) : RemoteEvent {
+    override fun encode() = byteArrayOf(RemoteEvent.OP_KEY_DOWN) + beBytes(vk)
+}
+data class KeyUp(val vk: Short) : RemoteEvent {
+    override fun encode() = byteArrayOf(RemoteEvent.OP_KEY_UP) + beBytes(vk)
+}
+data class TextInput(val text: String) : RemoteEvent {
+    override fun encode(): ByteArray {
+        val data = text.encodeToByteArray()
+        require(data.size <= 255) { "Text too long" }
+        return byteArrayOf(RemoteEvent.OP_TEXT_IN, data.size.toByte()) + data
+    }
 }
 
 private fun beBytes(v: Short) = byteArrayOf(((v.toInt() ushr 8) and 0xFF).toByte(),

@@ -4,6 +4,7 @@ import java.awt.MouseInfo
 import java.awt.Point
 import java.awt.Robot
 import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
 import kotlin.math.hypot
 
 /**
@@ -73,6 +74,17 @@ class RemoteMouseController {
 
         is RightClick -> {
             click(InputEvent.BUTTON3_DOWN_MASK); true
+        }
+
+        is KeyDown   -> { robot.keyPress(ev.vk.toInt());  true }
+        is KeyUp     -> { robot.keyRelease(ev.vk.toInt()); true }
+        is TextInput -> {
+            ev.text.forEach { ch ->
+                val vk = KeyEvent.getExtendedKeyCodeForChar(ch.code)
+                robot.keyPress(vk)
+                robot.keyRelease(vk)
+            }
+            true
         }
     }
 
